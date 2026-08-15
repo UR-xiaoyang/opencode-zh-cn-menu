@@ -82,8 +82,17 @@ const translate = (text) => {
 }
 
 const translateElement = (element) => {
-  const translation = translate(element.textContent?.trim() ?? "")
-  if (translation) element.textContent = translation
+  const text = element.textContent?.trim() ?? ""
+  const translation = translate(text)
+  if (!translation) return
+
+  const textNodes = [...element.childNodes].filter((node) => node.nodeType === Node.TEXT_NODE)
+  if (element.children.length && textNodes.length === 1 && textNodes[0].textContent?.trim() === text) {
+    textNodes[0].textContent = translation
+    return
+  }
+
+  element.textContent = translation
 }
 
 mod.ui.observe(
@@ -91,7 +100,10 @@ mod.ui.observe(
   translateElement,
 )
 
-mod.ui.observe("[data-slot='tabs-v2-trigger'][data-value='mods']", translateElement)
+mod.ui.observe(
+  "[data-slot='tabs-v2-trigger'][data-value='mods'] [data-slot='tabs-v2-trigger-content']",
+  translateElement,
+)
 
 mod.ui.observe(
   ".settings-v2-panel .settings-v2-tab-title, .settings-v2-panel [data-component='button-v2'], .settings-v2-panel [data-slot='settings-v2-row-title'], .settings-v2-panel [data-slot='settings-v2-row-description'], .settings-v2-panel .settings-v2-servers-status",
