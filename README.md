@@ -1,6 +1,6 @@
 # OpenCode 简体中文菜单
 
-将 OpenCode Desktop 的 Windows 应用菜单翻译为简体中文。
+将 OpenCode Desktop 的 Windows 应用菜单和设置中的 MOD 管理页翻译为简体中文。
 
 ## 安装
 
