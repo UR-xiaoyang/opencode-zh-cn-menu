@@ -1,5 +1,11 @@
 const mod = window.opencodeHost.forScript()
 
+const report = (status, message) => {
+  const reportRuntime = mod.desktop?.mods?.reportRuntime
+  if (typeof reportRuntime !== "function") return
+  void reportRuntime(mod.id, "host", status, message)
+}
+
 const translations = new Map([
   ["File", "文件"],
   ["Edit", "编辑"],
@@ -99,38 +105,68 @@ const translate = (text) => {
 const translateElement = (element) => {
   const text = element.textContent?.trim() ?? ""
   const translation = translate(text)
-  if (!translation) return
+  if (!translation) return false
 
   const textNodes = [...element.childNodes].filter((node) => node.nodeType === Node.TEXT_NODE)
   if (element.children.length && textNodes.length === 1 && textNodes[0].textContent?.trim() === text) {
     textNodes[0].textContent = translation
-    return
+    return true
   }
 
   element.textContent = translation
+  return true
 }
 
-mod.ui.observe(
-  ".desktop-app-menu [data-slot='dropdown-menu-item-label'], .desktop-app-menu-heading",
-  translateElement,
-)
+const menuSelector = ".desktop-app-menu [data-slot='dropdown-menu-item-label'], .desktop-app-menu-heading"
+const modsTabSelector = "[data-slot='tabs-v2-trigger'][data-value='mods'] [data-slot='tabs-v2-trigger-content']"
+const modsSettingsSelector =
+  ".settings-v2-tab-title, [data-component='button-v2'], [data-slot='settings-v2-row-title'], [data-slot='settings-v2-row-description'], .settings-v2-servers-status"
 
-mod.ui.observe(
-  "[data-slot='tabs-v2-trigger'][data-value='mods'] [data-slot='tabs-v2-trigger-content']",
-  translateElement,
-)
+const isModsPanel = (panel) => {
+  const title = panel.querySelector(".settings-v2-tab-title")?.textContent?.trim()
+  return title === "MODs" || title === "模组"
+}
 
-mod.ui.observe(
-  ".settings-v2-panel .settings-v2-tab-title, .settings-v2-panel [data-component='button-v2'], .settings-v2-panel [data-slot='settings-v2-row-title'], .settings-v2-panel [data-slot='settings-v2-row-description'], .settings-v2-panel .settings-v2-servers-status",
-  (element) => {
-    const panel = element.closest(".settings-v2-panel")
-    const title = panel?.querySelector(".settings-v2-tab-title")?.textContent?.trim()
-    if (title !== "MODs" && title !== "模组") return
-    translateElement(element)
-  },
-)
+const translateModsSettings = () => {
+  let translated = 0
+  document.querySelectorAll(".settings-v2-panel").forEach((panel) => {
+    if (!isModsPanel(panel)) return
+    panel.querySelectorAll(modsSettingsSelector).forEach((element) => {
+      if (translateElement(element)) translated += 1
+    })
+  })
+  return translated
+}
+
+const scanTranslations = () => {
+  let translated = 0
+  document.querySelectorAll(menuSelector).forEach((element) => {
+    if (translateElement(element)) translated += 1
+  })
+  document.querySelectorAll(modsTabSelector).forEach((element) => {
+    if (translateElement(element)) translated += 1
+  })
+  return translated + translateModsSettings()
+}
+
+mod.ui.observe(menuSelector, translateElement)
+mod.ui.observe(modsTabSelector, translateElement)
+mod.ui.observe(`.settings-v2-panel ${modsSettingsSelector}`, (element) => {
+  const panel = element.closest(".settings-v2-panel")
+  if (panel && isModsPanel(panel)) translateElement(element)
+})
 
 mod.ui.observe(
   "[data-component='dialog-v2'] [data-slot='dialog-header-title'], [data-component='dialog-v2'] [data-slot='dialog-body'] p, [data-component='dialog-v2'] [data-component='button-v2'], [data-component='dialog-v2'] [data-slot='dialog-body'] span",
   translateElement,
 )
+
+mod.debug.register("reapply-translations", () => {
+  const translated = scanTranslations()
+  report("ready", `Translation scan completed; ${translated} element(s) changed.`)
+})
+
+requestAnimationFrame(() => {
+  const translated = scanTranslations()
+  report("ready", `Translation observers started; initial scan changed ${translated} element(s).`)
+})
