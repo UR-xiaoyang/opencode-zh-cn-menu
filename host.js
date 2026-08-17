@@ -42,6 +42,12 @@ const translations = new Map([
   ["Share Feedback", "提交反馈"],
   ["Report a Bug", "报告问题"],
   ["MODs", "模组"],
+  ["Debug", "调试"],
+  ["All MODs", "全部模组"],
+  ["Copy listener", "复制监听地址"],
+  ["Clear", "清除"],
+  ["MOD Debug Console", "模组调试台"],
+  ["No MOD debug events recorded in this app session.", "本次应用会话中没有记录到模组调试事件。"],
   ["Open folder", "打开文件夹"],
   ["Refresh", "刷新"],
   ["Safe mode", "安全模式"],
@@ -77,6 +83,15 @@ const translate = (text) => {
   if (conflictDescription) {
     return `${conflictDescription[1]} 与已启用模组的贡献内容重叠。优先级更高的模组会在后加载，并在加载顺序能够解决重叠时生效。`
   }
+
+  const debugConsole = text.match(/^MOD Debug Console · (.+)$/)
+  if (debugConsole) return `模组调试台 · ${debugConsole[1]}`
+
+  const noModDebugEvents = text.match(/^No debug events recorded for (.+) in this app session\.$/)
+  if (noModDebugEvents) return `本次应用会话中没有记录到 ${noModDebugEvents[1]} 的调试事件。`
+
+  const debugStatus = text.match(/^(Debug error|Debug) · (.+) \((.+)\)$/)
+  if (debugStatus) return `${debugStatus[1] === "Debug error" ? "调试错误" : "调试"} · ${debugStatus[2]} (${debugStatus[3]})`
 
   return undefined
 }

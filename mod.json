@@ -1,7 +1,7 @@
 {
   "id": "opencode-zh-cn-menu",
   "name": "OpenCode 简体中文菜单",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "将 OpenCode Desktop 的 Windows 应用菜单和 MOD 管理页翻译为简体中文。",
   "engines": {
     "opencode": "^1.18.0"
