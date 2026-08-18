@@ -51,9 +51,14 @@ const translations = new Map([
   ["Debug", "调试"],
   ["All MODs", "全部模组"],
   ["Copy listener", "复制监听地址"],
+  ["Listener copied", "监听地址已复制"],
+  ["Copy logs", "复制日志"],
+  ["Logs copied", "日志已复制"],
+  ["Copy failed", "复制失败"],
   ["Clear", "清除"],
   ["MOD Debug Console", "模组调试台"],
   ["No MOD debug events recorded in this app session.", "本次应用会话中没有记录到模组调试事件。"],
+  ["Could not copy to the system clipboard.", "无法复制到系统剪贴板。"],
   ["Open folder", "打开文件夹"],
   ["Refresh", "刷新"],
   ["Safe mode", "安全模式"],
@@ -67,9 +72,59 @@ const translations = new Map([
   ["Keep existing priority", "保留现有优先级"],
 ])
 
+const translateDiagnosticMessage = (message) => {
+  const direct = new Map([
+    ["Host script initialized its MOD runtime.", "宿主脚本已初始化 MOD 运行时。"],
+    ["MOD host runtime is not active.", "MOD 宿主运行时未激活。"],
+    ["Host script loaded.", "宿主脚本已加载。"],
+    ["Host script failed to load or execute.", "宿主脚本加载或执行失败。"],
+    ["Stylesheet loaded.", "样式表已加载。"],
+    ["Stylesheet failed to load.", "样式表加载失败。"],
+    ["Sidebar panel finished loading.", "侧边栏面板已加载完成。"],
+    ["Sidebar panel failed to load.", "侧边栏面板加载失败。"],
+    ["Manifest and declared local files are valid.", "清单及声明的本地文件校验通过。"],
+    ["Bootstrap completed before the server module was imported.", "服务模块导入前的引导已完成。"],
+    ["Sidecar started with this server plugin enabled.", "已启用此服务插件并启动 Sidecar。"],
+    [
+      "Host script loaded but did not initialize its MOD runtime. Call window.opencodeHost.forScript() at the top level.",
+      "宿主脚本已加载，但未初始化 MOD 运行时。请在顶层调用 window.opencodeHost.forScript()。",
+    ],
+  ]).get(message)
+  if (direct) return direct
+
+  const debugRegistered = message.match(/^Host debug action "(.+)" is not registered\.$/)
+  if (debugRegistered) return `未注册宿主调试操作“${debugRegistered[1]}”。`
+
+  const debugCompleted = message.match(/^Host debug action "(.+)" completed\.$/)
+  if (debugCompleted) return `宿主调试操作“${debugCompleted[1]}”已完成。`
+
+  const debugFailed = message.match(/^Host debug action "(.+)" failed\.$/)
+  if (debugFailed) return `宿主调试操作“${debugFailed[1]}”执行失败。`
+
+  const executionFailed = message.match(/^Host script execution failed: (.+)$/)
+  if (executionFailed) return `宿主脚本执行失败：${executionFailed[1]}`
+
+  const observerFailed = message.match(/^UI observer failed: (.+)$/)
+  if (observerFailed) return `界面观察器运行失败：${observerFailed[1]}`
+
+  const translationInitial = message.match(/^Translation initial scan changed (\d+) element\(s\)\.$/)
+  if (translationInitial) return `汉化初始扫描已修改 ${translationInitial[1]} 个元素。`
+
+  const translationScan = message.match(/^Translation scan completed; (\d+) element\(s\) changed\.$/)
+  if (translationScan) return `汉化扫描已完成；修改了 ${translationScan[1]} 个元素。`
+
+  const observerStartFailed = message.match(/^Translation observer could not start: (.+)$/)
+  if (observerStartFailed) return `汉化观察器无法启动：${observerStartFailed[1]}`
+
+  return message
+}
+
 const translate = (text) => {
   const direct = translations.get(text)
   if (direct) return direct
+
+  const loaderStatus = text.match(/^MOD Loader v(.+) · (Enabled|Safe mode)$/)
+  if (loaderStatus) return `MOD 加载器 v${loaderStatus[1]} · ${loaderStatus[2] === "Enabled" ? "已启用" : "安全模式"}`
 
   const priority = text.match(/^v(.+) · Priority (-?\d+)$/)
   if (priority) return `v${priority[1]} · 优先级 ${priority[2]}`
@@ -99,6 +154,20 @@ const translate = (text) => {
   const debugStatus = text.match(/^(Debug error|Debug) · (.+) \((.+)\)$/)
   if (debugStatus) return `${debugStatus[1] === "Debug error" ? "调试错误" : "调试"} · ${debugStatus[2]} (${debugStatus[3]})`
 
+  const debugLog = text.match(/^(\[[^\]]+\])\s+(READY|ERROR)\s+(\S+)\s+(\S+):\s+(.+)$/)
+  if (debugLog) {
+    const phase = new Map([
+      ["manifest", "清单"],
+      ["host", "宿主"],
+      ["server", "服务"],
+      ["server-bootstrap", "服务引导"],
+      ["sidebar", "侧边栏"],
+      ["style", "样式"],
+      ["trigger", "触发"],
+    ]).get(debugLog[4])
+    return `${debugLog[1]} ${debugLog[2] === "READY" ? "就绪" : "错误"} ${debugLog[3]} ${phase ?? debugLog[4]}: ${translateDiagnosticMessage(debugLog[5])}`
+  }
+
   return undefined
 }
 
@@ -120,7 +189,7 @@ const translateElement = (element) => {
 const menuSelector = ".desktop-app-menu [data-slot='dropdown-menu-item-label'], .desktop-app-menu-heading"
 const modsTabSelector = "[data-slot='tabs-v2-trigger'][data-value='mods'] [data-slot='tabs-v2-trigger-content']"
 const modsSettingsSelector =
-  ".settings-v2-tab-title, [data-component='button-v2'], [data-slot='settings-v2-row-title'], [data-slot='settings-v2-row-description'], .settings-v2-servers-status"
+  ".settings-v2-tab-title, [data-component='button-v2'], [data-slot='settings-v2-row-title'], [data-slot='settings-v2-row-description'], .settings-v2-servers-status, .settings-v2-tab-header-row span.text-xs, .max-h-80 > div"
 
 const isModsPanel = (panel) => {
   const title = panel.querySelector(".settings-v2-tab-title")?.textContent?.trim()
