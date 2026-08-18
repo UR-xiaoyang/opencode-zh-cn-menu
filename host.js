@@ -1,4 +1,5 @@
-const mod = window.opencodeHost.forScript()
+// Use the declared MOD id so concurrent host script loading cannot lose document.currentScript ownership.
+const mod = window.opencodeHost.forMod("opencode-zh-cn-menu")
 
 const report = (status, message) => {
   const reportRuntime = mod.desktop?.mods?.reportRuntime
