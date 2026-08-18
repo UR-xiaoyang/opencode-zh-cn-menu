@@ -149,24 +149,33 @@ const scanTranslations = () => {
   return translated + translateModsSettings()
 }
 
-mod.ui.observe(menuSelector, translateElement)
-mod.ui.observe(modsTabSelector, translateElement)
-mod.ui.observe(`.settings-v2-panel ${modsSettingsSelector}`, (element) => {
+requestAnimationFrame(() => {
+  const translated = scanTranslations()
+  report("ready", `Translation initial scan changed ${translated} element(s).`)
+})
+
+const observe = (selector, callback) => {
+  try {
+    mod.ui.observe(selector, callback)
+  } catch (error) {
+    report("error", `Translation observer could not start: ${error instanceof Error ? error.message : "Unknown error"}`)
+  }
+}
+
+observe(menuSelector, translateElement)
+observe(modsTabSelector, translateElement)
+observe(`.settings-v2-panel ${modsSettingsSelector}`, (element) => {
   const panel = element.closest(".settings-v2-panel")
   if (panel && isModsPanel(panel)) translateElement(element)
 })
-
-mod.ui.observe(
+observe(
   "[data-component='dialog-v2'] [data-slot='dialog-header-title'], [data-component='dialog-v2'] [data-slot='dialog-body'] p, [data-component='dialog-v2'] [data-component='button-v2'], [data-component='dialog-v2'] [data-slot='dialog-body'] span",
   translateElement,
 )
 
-mod.debug.register("reapply-translations", () => {
-  const translated = scanTranslations()
-  report("ready", `Translation scan completed; ${translated} element(s) changed.`)
-})
-
-requestAnimationFrame(() => {
-  const translated = scanTranslations()
-  report("ready", `Translation observers started; initial scan changed ${translated} element(s).`)
-})
+if (typeof mod.debug?.register === "function") {
+  mod.debug.register("reapply-translations", () => {
+    const translated = scanTranslations()
+    report("ready", `Translation scan completed; ${translated} element(s) changed.`)
+  })
+}
